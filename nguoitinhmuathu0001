@@ -1,60 +1,58 @@
--- // Grow a Garden - Auto Pet Center
--- // Tự động gom toàn bộ Pet về giữa vườn rồi đứng im
--- // Có nút bật/tắt (GUI)
+--// Freeze Pets GUI (Grow a Garden)
+-- ON = tất cả pet đứng im, pet spawn mới cũng bị đóng băng
+-- OFF = pet hoạt động lại bình thường
 
--- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- GUI
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-local Frame = Instance.new("Frame", ScreenGui)
-local Button = Instance.new("TextButton", Frame)
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local ToggleButton = Instance.new("TextButton", ScreenGui)
+ToggleButton.Size = UDim2.new(0, 180, 0, 50)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.2, 0)
+ToggleButton.Text = "🔴 Freeze Pets: OFF"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 20
+ToggleButton.Draggable = true
 
-ScreenGui.Name = "AutoPetCenterGUI"
+-- Trạng thái
+local frozen = false
 
-Frame.Size = UDim2.new(0, 200, 0, 60)
-Frame.Position = UDim2.new(0.5, -100, 0.2, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Frame.Active = true
-Frame.Draggable = true
-
-Button.Size = UDim2.new(1, 0, 1, 0)
-Button.Text = "Auto Pet Center: OFF"
-Button.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-Button.TextColor3 = Color3.fromRGB(255,255,255)
-Button.Font = Enum.Font.SourceSansBold
-Button.TextSize = 18
-
--- Auto gom Pet
-local autoPet = false
--- ⚠️ chỉnh lại nếu giữa vườn có tọa độ khác
-local centerPos = Vector3.new(0, 5, 0)  
-
-local function movePetsToCenter()
-    while autoPet do
-        task.wait(1)
-        local petsFolder = LocalPlayer:FindFirstChild("Pets") or LocalPlayer:FindFirstChild("PetFolder")
-        if petsFolder then
-            for _, pet in pairs(petsFolder:GetChildren()) do
-                if pet:IsA("Model") and pet.PrimaryPart then
-                    -- Dịch chuyển Pet về giữa vườn
-                    pet:SetPrimaryPartCFrame(CFrame.new(centerPos))
+-- Hàm xử lý đóng băng
+local function setPetsFrozen(state)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and string.find(obj.Name:lower(), "pet") then
+            for _, part in ipairs(obj:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = state
                 end
             end
         end
     end
 end
 
--- Toggle Button
-Button.MouseButton1Click:Connect(function()
-    autoPet = not autoPet
-    if autoPet then
-        Button.Text = "Auto Pet Center: ON"
-        Button.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        task.spawn(movePetsToCenter)
+-- Theo dõi pet mới spawn
+workspace.DescendantAdded:Connect(function(obj)
+    if frozen and obj:IsA("BasePart") and obj.Parent and obj.Parent:IsA("Model") then
+        if string.find(obj.Parent.Name:lower(), "pet") then
+            task.wait(0.1) -- chờ pet spawn đầy đủ
+            obj.Anchored = true
+        end
+    end
+end)
+
+-- Toggle button
+ToggleButton.MouseButton1Click:Connect(function()
+    frozen = not frozen
+    if frozen then
+        ToggleButton.Text = "🟢 Freeze Pets: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        setPetsFrozen(true)
     else
-        Button.Text = "Auto Pet Center: OFF"
-        Button.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        ToggleButton.Text = "🔴 Freeze Pets: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+        setPetsFrozen(false)
     end
 end)
